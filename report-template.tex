@@ -1,126 +1,137 @@
 \documentclass[conference]{IEEEtran}
 
 \usepackage{graphicx}
+\usepackage{listings}
+\usepackage{xcolor}
 \usepackage{float}
-\usepackage{hyperref}
+
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+
+\lstdefinestyle{mystyle}{
+    backgroundcolor=\color{backcolour},   
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{magenta},
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
+    basicstyle=\ttfamily\footnotesize,
+    breakatwhitespace=false,         
+    breaklines=true,                 
+    captionpos=b,                    
+    keepspaces=true,                 
+    numbers=left,                    
+    numbersep=5pt,                  
+    showspaces=false,                
+    showstringspaces=false,
+    showtabs=false,                  
+    tabsize=2
+}
+
+\lstset{style=mystyle}
 
 \title{ECG Heartbeat Classification Analysis}
 
 \begin{document}
-
 \maketitle
 
 \section{Introduction}
-This report details the practical implementation of a Convolutional Neural Network (CNN) for classifying ECG heartbeats. The analysis is performed using Python with TensorFlow and Pandas. The workflow includes data loading, preprocessing, model architecture design, training configuration, and final evaluation on the PTBDB dataset.
+This report documents the practical implementation of a Convolutional Neural Network (CNN) for classifying ECG heartbeats using the PTBDB dataset. The workflow utilizes Python with TensorFlow and Pandas to perform data loading, preprocessing, model architecture design, and evaluation.
 
 \section{Data Preparation}
 
-\subsection{Data Loading and Inspection}
-The analysis begins by loading the dataset files. The code explicitly handles two specific CSV files containing heartbeat data:
-\begin{itemize}
-    \item \texttt{ptbdb\_abnormal.csv}: Abnormal heartbeat samples (10,506 samples).
-    \item \texttt{ptbdb\_normal.csv}: Normal heartbeat samples (4,046 samples).
-\end{itemize}
-\begin{figure}[htbp]
-    \centering
-    \includegraphics[width=\linewidth]{dataset.png}
-    \caption{Dataset.}
-    \label{fig:split_data}
-\end{figure}
-These datasets are concatenated to form a single dataframe for processing.
-
 \subsection{Preprocessing and Splitting}
-The preprocessing phase involves preparing the features ($X$) and labels ($y$). The data is reshaped to meet the 3D input requirements of the 1D CNN (samples, timesteps, channels). Specifically, the features are reshaped to $(N, 187, 1)$.
+The analysis processes abnormal and normal heartbeat samples. The data is concatenated and reshaped to meet the 3D input requirements of the 1D CNN: $(Samples, 187, 1)$.
 
-The data is then split into training and testing sets using a 80-20 split ratio (\texttt{test\_size=0.2}). Figure \ref{fig:split_data} illustrates the code used for this splitting and reshaping process, as well as the one-hot encoding of the target labels.
+The data is split into training and testing sets (80/20 ratio) using \texttt{train\_test\_split}. The following code snippet demonstrates the splitting and reshaping logic:
 
-\begin{figure}[htbp]
-    \centering
-    \includegraphics[width=\linewidth]{split_data.png}
-    \caption{Code implementation for train/test split and data reshaping.}
-    \label{fig:split_data}
-\end{figure}
+\begin{lstlisting}[language=Python, caption=Data splitting and reshaping]
+# Split Data
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
+
+# Reshape for CNN: (samples, time_steps, features)
+X_train = X_train.reshape(X_train.shape[0], X_train.shape[1], 1)
+X_test = X_test.reshape(X_test.shape[0], X_test.shape[1], 1)
+\end{lstlisting}
 
 \section{Model Architecture}
 
-\subsection{CNN Construction}
-A Sequential model is built using TensorFlow Keras. The architecture is designed to capture temporal dependencies in the ECG signals. The specific layers defined in the code are:
+A Sequential CNN model is constructed using TensorFlow Keras. The architecture includes three convolutional blocks followed by dense layers. 
+
 \begin{itemize}
-    \item \textbf{Convolutional Layers}: Three blocks of \texttt{Conv1D} layers with 64 filters and a kernel size of 6, each followed by \texttt{BatchNormalization} and \texttt{MaxPooling1D} (pool size 3, stride 2) to downsample the features.
-    \item \textbf{Dense Layers}: The 1D output is flattened and passed through two dense layers (64 and 32 units) with ReLU activation.
-    \item \textbf{Output Layer}: A final dense layer with 2 units (Softmax) for the binary classification.
+    \item \textbf{Input}: Shape (187, 1)
+    \item \textbf{Conv Blocks}: \texttt{Conv1D} (32/64 filters) $\rightarrow$ \texttt{BatchNormalization} $\rightarrow$ \texttt{MaxPooling1D}.
+    \item \textbf{Classifier}: Flatten $\rightarrow$ Dense (64, ReLU) $\rightarrow$ Dropout (0.5) $\rightarrow$ Dense (1, Sigmoid).
 \end{itemize}
 
-Figure \ref{fig:build_model} shows the exact Python code used to construct this sequential architecture.
-
-\begin{figure}[htbp]
-    \centering
-    \includegraphics[width=\linewidth]{build_model.png}
-    \caption{Implementation of the Sequential CNN architecture.}
-    \label{fig:build_model}
-\end{figure}
+\begin{lstlisting}[language=Python, caption=CNN Model Architecture]
+model = models.Sequential([
+    layers.Input(shape=(X_train.shape[1], 1)),
+    layers.Conv1D(32, 5, activation='relu'),
+    layers.BatchNormalization(),
+    layers.MaxPooling1D(2),
+    layers.Conv1D(64, 5, activation='relu'),
+    layers.BatchNormalization(),
+    layers.MaxPooling1D(2),
+    layers.Flatten(),
+    layers.Dense(64, activation='relu'),
+    layers.Dropout(0.5),
+    layers.Dense(1, activation='sigmoid')
+])
+\end{lstlisting}
 
 \section{Training Configuration}
 
-\subsection{Compilation}
-The model is compiled using the \texttt{Adam} optimizer with a learning rate of 0.001. The loss function is set to \texttt{categorical\_crossentropy}, suitable for the one-hot encoded targets. Figure \ref{fig:adam_optimizer} demonstrates this configuration.
+The model is compiled with the \texttt{Adam} optimizer and \texttt{binary\_crossentropy} loss function. Training is executed for 5 epochs with a batch size of 32.
 
-\begin{figure}[htbp]
-    \centering
-    \includegraphics[width=\linewidth]{adam_optimizer.png}
-    \caption{Model compilation with Adam optimizer.}
-    \label{fig:adam_optimizer}
-\end{figure}
-
-\subsection{Training Process}
-The model is trained for 5 epochs with a batch size of 32. A validation split of 0.1 is used to monitor performance on unseen data during training. Figure \ref{fig:training} captures the training log, showing the progression of loss and accuracy for each epoch.
-
-\begin{figure}[htbp]
-    \centering
-    \includegraphics[width=\linewidth]{training.png}
-    \caption{Training logs showing loss and accuracy over 5 epochs.}
-    \label{fig:training}
-\end{figure}
+\begin{lstlisting}[language=Python, caption=Model Training]
+model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
+history = model.fit(X_train, y_train, epochs=5, batch_size=32, validation_split=0.1, verbose=0)
+\end{lstlisting}
 
 \section{Results and Visualization}
 
-To assess the model's stability, the training history metrics (accuracy and loss) were extracted and visualized.
+To evaluate model stability, the accuracy and loss metrics were extracted from the training history and visualized using Matplotlib.
 
-\subsection{Metric Extraction}
-The code in Figure \ref{fig:extract_acc} extracts the \texttt{accuracy}, \texttt{val\_accuracy}, \texttt{loss}, and \texttt{val\_loss} from the training history object.
+\subsection{Plotting Code}
+The code below generates the comparison plots between training and validation performance:
 
-\begin{figure}[htbp]
+\begin{lstlisting}[language=Python, caption=Visualization Logic]
+plt.figure(figsize=(12, 4))
+
+# Plot Accuracy
+plt.subplot(1, 2, 1)
+plt.plot(epochs_range, acc, label='Training Accuracy')
+plt.plot(epochs_range, val_acc, label='Validation Accuracy')
+plt.title('Training and Validation Accuracy')
+
+# Plot Loss
+plt.subplot(1, 2, 2)
+plt.plot(epochs_range, loss, label='Training Loss')
+plt.plot(epochs_range, val_loss, label='Validation Loss')
+plt.title('Training and Validation Loss')
+
+plt.show()
+\end{lstlisting}
+
+\subsection{Performance Output}
+The resulting visualization indicates the model's convergence over the 5 epochs. Figure \ref{fig:output} displays the generated graphs.
+
+\begin{figure*}[htbp]
     \centering
-    \includegraphics[width=\linewidth]{extract_acc.png}
-    \caption{Extraction of training metrics from history.}
-    \label{fig:extract_acc}
-\end{figure}
-
-\subsection{Performance Plots}
-Matplotlib is used to plot these metrics. Figure \ref{fig:plot_code} displays the plotting code, and Figure \ref{fig:output} presents the resulting graphs. The graphs allow for a visual comparison between training and validation performance to check for overfitting.
-
-\begin{figure}[htbp]
-    \centering
-    \includegraphics[width=\linewidth]{plot.png}
-    \caption{Matplotlib code for generating accuracy and loss curves.}
-    \label{fig:plot_code}
-\end{figure}
-
-\begin{figure}[htbp]
-    \centering
-    \includegraphics[width=\linewidth]{output.png}
-    \caption{Visualized training and validation performance.}
+    \includegraphics[width=\linewidth]{training.pdf}
+    \caption{Training and validation accuracy and loss curves.}
     \label{fig:output}
-\end{figure}
+\end{figure*}
 
 \section{Evaluation}
-Finally, the model's performance is quantified on the independent test set. Figure \ref{fig:evaluate} shows the execution of \texttt{model.evaluate}, displaying the final loss and accuracy achieved by the model on the test data.
 
-\begin{figure}[htbp]
-    \centering
-    \includegraphics[width=\linewidth]{evaluate.png}
-    \caption{Final evaluation on the test dataset.}
-    \label{fig:evaluate}
-\end{figure}
+The model was finally evaluated on the unseen test dataset ($X\_test$, $y\_test$), achieving an accuracy of approximately 92.44\%.
+
+\begin{lstlisting}[language=Python, caption=Final Evaluation]
+loss, accuracy = model.evaluate(X_test, y_test, verbose=0)
+print(f"Test Accuracy: {accuracy:.4f}")
+\end{lstlisting}
 
 \end{document}
