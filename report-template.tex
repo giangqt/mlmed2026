@@ -1,22 +1,126 @@
 \documentclass[conference]{IEEEtran}
 
-\title{This is your report}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{hyperref}
+
+\title{ECG Heartbeat Classification Analysis}
 
 \begin{document}
 
 \maketitle
 
-Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+\section{Introduction}
+This report details the practical implementation of a Convolutional Neural Network (CNN) for classifying ECG heartbeats. The analysis is performed using Python with TensorFlow and Pandas. The workflow includes data loading, preprocessing, model architecture design, training configuration, and final evaluation on the PTBDB dataset.
 
-Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+\section{Data Preparation}
 
-Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+\subsection{Data Loading and Inspection}
+The analysis begins by loading the dataset files. The code explicitly handles two specific CSV files containing heartbeat data:
+\begin{itemize}
+    \item \texttt{ptbdb\_abnormal.csv}: Abnormal heartbeat samples (10,506 samples).
+    \item \texttt{ptbdb\_normal.csv}: Normal heartbeat samples (4,046 samples).
+\end{itemize}
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=\linewidth]{dataset.png}
+    \caption{Dataset.}
+    \label{fig:split_data}
+\end{figure}
+These datasets are concatenated to form a single dataframe for processing.
 
-Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+\subsection{Preprocessing and Splitting}
+The preprocessing phase involves preparing the features ($X$) and labels ($y$). The data is reshaped to meet the 3D input requirements of the 1D CNN (samples, timesteps, channels). Specifically, the features are reshaped to $(N, 187, 1)$.
 
-Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+The data is then split into training and testing sets using a 80-20 split ratio (\texttt{test\_size=0.2}). Figure \ref{fig:split_data} illustrates the code used for this splitting and reshaping process, as well as the one-hot encoding of the target labels.
 
-Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
-Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=\linewidth]{split_data.png}
+    \caption{Code implementation for train/test split and data reshaping.}
+    \label{fig:split_data}
+\end{figure}
+
+\section{Model Architecture}
+
+\subsection{CNN Construction}
+A Sequential model is built using TensorFlow Keras. The architecture is designed to capture temporal dependencies in the ECG signals. The specific layers defined in the code are:
+\begin{itemize}
+    \item \textbf{Convolutional Layers}: Three blocks of \texttt{Conv1D} layers with 64 filters and a kernel size of 6, each followed by \texttt{BatchNormalization} and \texttt{MaxPooling1D} (pool size 3, stride 2) to downsample the features.
+    \item \textbf{Dense Layers}: The 1D output is flattened and passed through two dense layers (64 and 32 units) with ReLU activation.
+    \item \textbf{Output Layer}: A final dense layer with 2 units (Softmax) for the binary classification.
+\end{itemize}
+
+Figure \ref{fig:build_model} shows the exact Python code used to construct this sequential architecture.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=\linewidth]{build_model.png}
+    \caption{Implementation of the Sequential CNN architecture.}
+    \label{fig:build_model}
+\end{figure}
+
+\section{Training Configuration}
+
+\subsection{Compilation}
+The model is compiled using the \texttt{Adam} optimizer with a learning rate of 0.001. The loss function is set to \texttt{categorical\_crossentropy}, suitable for the one-hot encoded targets. Figure \ref{fig:adam_optimizer} demonstrates this configuration.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=\linewidth]{adam_optimizer.png}
+    \caption{Model compilation with Adam optimizer.}
+    \label{fig:adam_optimizer}
+\end{figure}
+
+\subsection{Training Process}
+The model is trained for 5 epochs with a batch size of 32. A validation split of 0.1 is used to monitor performance on unseen data during training. Figure \ref{fig:training} captures the training log, showing the progression of loss and accuracy for each epoch.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=\linewidth]{training.png}
+    \caption{Training logs showing loss and accuracy over 5 epochs.}
+    \label{fig:training}
+\end{figure}
+
+\section{Results and Visualization}
+
+To assess the model's stability, the training history metrics (accuracy and loss) were extracted and visualized.
+
+\subsection{Metric Extraction}
+The code in Figure \ref{fig:extract_acc} extracts the \texttt{accuracy}, \texttt{val\_accuracy}, \texttt{loss}, and \texttt{val\_loss} from the training history object.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=\linewidth]{extract_acc.png}
+    \caption{Extraction of training metrics from history.}
+    \label{fig:extract_acc}
+\end{figure}
+
+\subsection{Performance Plots}
+Matplotlib is used to plot these metrics. Figure \ref{fig:plot_code} displays the plotting code, and Figure \ref{fig:output} presents the resulting graphs. The graphs allow for a visual comparison between training and validation performance to check for overfitting.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=\linewidth]{plot.png}
+    \caption{Matplotlib code for generating accuracy and loss curves.}
+    \label{fig:plot_code}
+\end{figure}
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=\linewidth]{output.png}
+    \caption{Visualized training and validation performance.}
+    \label{fig:output}
+\end{figure}
+
+\section{Evaluation}
+Finally, the model's performance is quantified on the independent test set. Figure \ref{fig:evaluate} shows the execution of \texttt{model.evaluate}, displaying the final loss and accuracy achieved by the model on the test data.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=\linewidth]{evaluate.png}
+    \caption{Final evaluation on the test dataset.}
+    \label{fig:evaluate}
+\end{figure}
 
 \end{document}
