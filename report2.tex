@@ -1,0 +1,190 @@
+\documentclass[12pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{amsmath}
+\usepackage{geometry}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{caption}
+
+\geometry{margin=1in}
+
+\lstset{
+    basicstyle=\ttfamily\small,
+    breaklines=true,
+    frame=single,
+    backgroundcolor=\color{gray!10}
+}
+
+\title{Measurement of Fetal Head Circumference Using Ultrasound Images}
+\author{Nguyen Truong Giang}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\section{Introduction}
+
+Fetal head circumference (HC) is an important biometric measurement in prenatal care.
+Ultrasound imaging is widely used for this purpose due to its safety and accessibility.
+This report presents a machine learning approach to estimate fetal head circumference
+from ultrasound images using a convolutional neural network (CNN).
+
+\section{Dataset Description}
+
+The dataset consists of grayscale ultrasound images and corresponding annotations:
+
+\begin{itemize}
+    \item \textbf{Training set}: ultrasound images with head circumference labels (mm)
+    \item \textbf{Test set}: ultrasound images without labels
+    \item \textbf{Metadata}: pixel size (mm) for each image
+\end{itemize}
+
+The training metadata file contains the following columns:
+\begin{itemize}
+    \item \texttt{filename}
+    \item \texttt{pixel size(mm)}
+    \item \texttt{head circumference (mm)}
+\end{itemize}
+
+\section{Dataset Exploration}
+
+\subsection{Distribution of Head Circumference}
+
+Figure~\ref{fig:hc_dist} shows the distribution of head circumference values in the training set.
+The data spans a wide range, indicating samples from early to late gestational stages.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\linewidth]{hc_distribution.pdf}
+    \caption{Head Circumference Distribution}
+    \label{fig:hc_dist}
+\end{figure}
+
+\subsection{Pixel Size Distribution}
+
+Figure~\ref{fig:pixel_dist} presents the pixel size distribution.
+Most images have pixel sizes between 0.08 mm and 0.15 mm.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\linewidth]{pixel_distribution.pdf}
+    \caption{Pixel Size Distribution}
+    \label{fig:pixel_dist}
+\end{figure}
+
+\subsection{Sample Ultrasound Images}
+
+Figure~\ref{fig:samples} shows randomly selected training images with their ground truth HC values.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\linewidth]{sample_images.pdf}
+    \caption{Sample Ultrasound Images with Head Circumference Labels}
+    \label{fig:samples}
+\end{figure}
+
+\section{Data Preprocessing}
+
+All images are:
+\begin{itemize}
+    \item Converted to grayscale
+    \item Resized to $128 \times 128$
+    \item Normalized to $[0,1]$
+\end{itemize}
+
+A custom data generator is used to load images and labels efficiently during training.
+
+\subsection{Data Generator Implementation}
+
+\begin{lstlisting}[language=Python]
+class HCDataGenerator(tf.keras.utils.Sequence):
+    def __init__(self, df, image_dir, batch_size=8):
+        self.df = df.reset_index(drop=True)
+        self.image_dir = image_dir
+        self.batch_size = batch_size
+
+    def __len__(self):
+        return int(np.ceil(len(self.df) / self.batch_size))
+
+    def __getitem__(self, idx):
+        batch = self.df.iloc[
+            idx * self.batch_size : (idx + 1) * self.batch_size
+        ]
+
+        X, y = [], []
+        for _, row in batch.iterrows():
+            img_path = f"{self.image_dir}/{row['filename']}"
+            img = load_image(img_path)
+            X.append(img)
+            y.append(row['head circumference (mm)'])
+
+        return np.array(X), np.array(y)
+\end{lstlisting}
+
+\newpage
+\section{Model Architecture}
+
+A simple convolutional neural network (CNN) is used for regression:
+
+\begin{itemize}
+    \item Convolution layers for feature extraction
+    \item Max pooling layers for spatial reduction
+    \item Fully connected layers for regression
+\end{itemize}
+
+\subsection{Model Definition}
+
+\begin{lstlisting}[language=Python]
+model = tf.keras.Sequential([
+    layers.Conv2D(32, 3, activation='relu', input_shape=(128,128,1)),
+    layers.MaxPooling2D(),
+    layers.Conv2D(64, 3, activation='relu'),
+    layers.MaxPooling2D(),
+    layers.Flatten(),
+    layers.Dense(128, activation='relu'),
+    layers.Dense(1)
+])
+
+model.compile(
+    optimizer='adam',
+    loss='mae',
+    metrics=['mae']
+)
+\end{lstlisting}
+
+\section{Training Strategy}
+
+The model is trained using:
+\begin{itemize}
+    \item Batch size: 8
+    \item Epochs: 20
+    \item Loss function: Mean Absolute Error (MAE)
+\end{itemize}
+
+\begin{lstlisting}[language=Python]
+history = model.fit(
+    train_generator,
+    epochs=20
+)
+\end{lstlisting}
+
+\section{Evaluation Metric}
+
+Mean Absolute Error (MAE) is used as the evaluation metric:
+
+\[
+MAE = \frac{1}{N} \sum_{i=1}^{N} |y_i - \hat{y}_i|
+\]
+
+This metric is suitable for regression tasks and provides an intuitive interpretation in millimeters.
+
+\section{Conclusion}
+
+This work demonstrates a baseline deep learning approach for fetal head circumference estimation
+from ultrasound images. Despite its simplicity, the model provides a reasonable starting point
+and can be further improved using advanced architectures, data augmentation, and multi-task learning.
+
+\end{document}
